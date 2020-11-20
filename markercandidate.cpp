@@ -13,10 +13,10 @@ MarkerCandidate::MarkerCandidate(const LineSegment& in_on_ls, const LineSegment&
 
     cv::Point points[4];
     int input_indices[4],output_indices[4];
-    points[0]=on_ls.p1;
-    points[1]=on_ls.p2;
-    points[2]=off_ls.p1;
-    points[3]=off_ls.p2;
+    points[0]=on_ls.p1();
+    points[1]=on_ls.p2();
+    points[2]=off_ls.p1();
+    points[3]=off_ls.p2();
 
     std::multimap<int,int> x_index,y_index;
     for(int i=0;i<4;i++){
@@ -26,15 +26,6 @@ MarkerCandidate::MarkerCandidate(const LineSegment& in_on_ls, const LineSegment&
     //the two points with the lowest x values
     int x_index_1=(*x_index.begin()).second;
     int x_index_2=(*std::next(x_index.begin())).second;
-    int x_index_3=(*std::next(std::next(x_index.begin()))).second;
-    int x_index_4=(*std::next(std::next(std::next(x_index.begin())))).second;
-
-    //the two points with the lowest y values
-    int y_index_1=(*y_index.begin()).second;
-    int y_index_2=(*std::next(y_index.begin())).second;
-    int y_index_3=(*std::next(std::next(y_index.begin()))).second;
-    int y_index_4=(*std::next(std::next(std::next(y_index.begin())))).second;
-
     //p1 the point with the lowest x and then lowest y value
     if (points[x_index_1].y>points[x_index_2].y){
         int tmp=x_index_1;
@@ -47,23 +38,25 @@ MarkerCandidate::MarkerCandidate(const LineSegment& in_on_ls, const LineSegment&
     output_indices[x_index_1]=0;
     output_indices[x_index_2]=3;
 
-    if (points[x_index_3].y>points[x_index_4].y){
-        int tmp=x_index_3;
-        x_index_3=x_index_4;
-        x_index_4=tmp;
+    //the two points with the lowest y values
+    int y_index_1=(*y_index.begin()).second;
+    int y_index_2=(*std::next(y_index.begin())).second;
+
+    if(y_index_1!=x_index_1){
+        int tmp=y_index_1;
+        y_index_1=y_index_2;
+        y_index_2=tmp;
     }
 
-    input_indices[1]=x_index_3;
-    input_indices[2]=x_index_4;
-    output_indices[x_index_3]=1;
-    output_indices[x_index_4]=2;
+    input_indices[1]=y_index_2;
+    output_indices[y_index_2]=1;
 
-//    for(int i=0;i<4;i++)
-//        if(i!=x_index_1 && i!=x_index_2 && i!=y_index_2){
-//            input_indices[2]=i;
-//            output_indices[i]=2;
-//            break;
-//        }
+    for(int i=0;i<4;i++)
+        if(i!=x_index_1 && i!=x_index_2 && i!=y_index_2){
+            input_indices[2]=i;
+            output_indices[i]=2;
+            break;
+        }
 
     int off_p1=std::min(output_indices[2],output_indices[3]);
     int off_p2=std::max(output_indices[2],output_indices[3]);
@@ -98,13 +91,7 @@ void MarkerCandidate::decode_candidate(){
     on_score_im=cv::Mat::zeros(num_cells,num_cells,CV_8UC1);
     off_score_im=cv::Mat::zeros(num_cells,num_cells,CV_8UC1);
 
-    vector<uchar*> on_score_fa(on_score_im.rows), off_score_fa(off_score_im.rows);
-    for(int r=0;r<on_score_im.rows;r++){
-        on_score_fa[r]=on_score_im.ptr<uchar>(r);
-        off_score_fa[r]=off_score_im.ptr<uchar>(r);
-    }
-
-    code_im=cv::Mat::zeros(num_cells,num_cells,CV_8UC1);
+    code_im=cv::Mat(num_cells,num_cells,CV_8UC1);
     code_im_fa.resize(num_cells);
     for(size_t r=0;r<num_cells;r++)
         code_im_fa[r]=code_im.ptr<uchar>(r);
@@ -125,36 +112,18 @@ void MarkerCandidate::decode_candidate(){
 
             image_on(cv::Range(y_min,y_max),cv::Range(x_min-gaussian_width/4,x_max-gaussian_width/4)).convertTo(on_roi,CV_64FC1);
             int on_score=cv::sum(on_roi.mul(g_kernel))[0];
-//            on_scores[r][c]=on_score;
-            on_score_fa[r][c]=on_score;
+            on_score_im.at<uchar>(r,c)=on_score;
+            on_scores[r][c]=on_score;
             if(on_score>max_on_score)
                 max_on_score=on_score;
 
             image_off(cv::Range(y_min,y_max),cv::Range(x_min,x_max)).convertTo(off_roi,CV_64FC1);
             int off_score=cv::sum(off_roi.mul(g_kernel))[0];
-//            off_scores[r][c]=off_score;
-            off_score_fa[r][c]=off_score;
+            off_score_im.at<uchar>(r,c)=off_score;
+            off_scores[r][c]=off_score;
             if(off_score>max_off_score)
                 max_off_score=off_score;
 
-        }
-    }
-
-    for(int r=1;r<num_cells-1;r++){//loop on rows and columns
-        for(int c=1;c<num_cells-1;c++){
-            if(on_score_fa[r][c]*100.0/max_on_score>threshold_on_pixels){
-                on_scores[r][c]=1;
-            }
-            else{
-                on_scores[r][c]=0;
-            }
-
-            if(off_score_fa[r][c]*100.0/max_off_score>threshold_off_pixels){
-                off_scores[r][c]=1;
-            }
-            else{
-                off_scores[r][c]=0;
-            }
         }
     }
 
@@ -165,14 +134,14 @@ void MarkerCandidate::decode_candidate(){
             if(code_im_fa[r][c-1]==0){
                 code_im_fa[r][c]=0;
 
-                if(on_scores[r][c]>0)
+                if(on_scores[r][c]*100.0/max_on_score>threshold_on_pixels)
                     code_im_fa[r][c]=1;
 
             }
             else{
                 code_im_fa[r][c]=1;
 
-                if(off_scores[r][c]>0)
+                if(off_scores[r][c]*100.0/max_on_score>threshold_off_pixels)
                     code_im_fa[r][c]=0;
             }
         }

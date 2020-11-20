@@ -34,11 +34,10 @@ bool ImageEventSynchronizer::goToPacket(size_t index, std::shared_ptr<libcaer::e
         reset();
     }
 
-    bool ret_val=true;
     while(index>curr_packet_index)
-        ret_val=getNextFrame(io_packet,io_image);
+        getNextFrame(io_packet,io_image);
 
-    return ret_val;
+    return getNextFrame(io_packet,io_image);
 }
 
 bool ImageEventSynchronizer::getNextFrame(std::shared_ptr<libcaer::events::PolarityEventPacket> &packet, cv::Mat &image, size_t *packet_index, size_t *image_index){

@@ -40,16 +40,16 @@ bool in_range(int input, int l, int h){
 }
 
 bool isEventful(const LineSegment &ls,const EventPacketProcessor::FastMat &mask){
-    float x_length=ls.p2.x-ls.p1.x;
-    float y_length=ls.p2.y-ls.p1.y;
+    float x_length=ls.p2().x-ls.p1().x;
+    float y_length=ls.p2().y-ls.p1().y;
     int steps=std::round(std::max(std::abs(x_length),std::abs(y_length)));
     float x_step=x_length/steps;
     float y_step=y_length/steps;
 
     int num_points=0;
     for(int i=0;i<=steps;i++){
-        int x = std::round(ls.p1.x+x_step*i);
-        int y = std::round(ls.p1.y+y_step*i);
+        int x = std::round(ls.p1().x+x_step*i);
+        int y = std::round(ls.p1().y+y_step*i);
         if(mask[y][x]){
             num_points++;
         }
@@ -58,9 +58,9 @@ bool isEventful(const LineSegment &ls,const EventPacketProcessor::FastMat &mask)
 }
 
 void EventPacketProcessor::find_line_offset(const EventFrame &age_frame, const LineSegment &ls, float goal_age, double &x_offset, double &y_offset){
-    const cv::Point2f mid_point=(ls.p1+ls.p2)/2;
+    const cv::Point2f mid_point=(ls.p1()+ls.p2())/2;
 
-    double x1=ls.p1.x, y1=ls.p1.y, x2=ls.p2.x, y2=ls.p2.y;
+    double x1=ls.p1().x, y1=ls.p1().y, x2=ls.p2().x, y2=ls.p2().y;
     double x_diff=x2-x1;
     double neg_y_diff=y1-y2;
     double norm_sq_1=x1*x1+y1*y1, norm_sq_2=x2*x2+y2*y2;
@@ -241,16 +241,16 @@ EventPacketProcessor::EventPacketProcessor(cv::Size is)
 
 cv::Point2f project_point_to_line(cv::Point p, LineSegment ls){
     cv::Point2f res(NAN,NAN);
-    float diff_x=ls.p1.x-ls.p2.x;
-    float diff_y=ls.p1.y-ls.p2.y;
+    float diff_x=ls.p1().x-ls.p2().x;
+    float diff_y=ls.p1().y-ls.p2().y;
     if(abs(diff_x)>abs(diff_y)){
         float a=diff_y/diff_x;
-        float b=ls.p1.y-a*ls.p1.x;
+        float b=ls.p1().y-a*ls.p1().x;
         res.x=(p.y+p.x/a-b)/(a+1.0/a);
         res.y=a*res.x+b;
     }else{
         float a=diff_x/diff_y;
-        float b=ls.p1.x-a*ls.p1.y;
+        float b=ls.p1().x-a*ls.p1().y;
         res.y=(p.x+p.y/a-b)/(a+1.0/a);
         res.x=a*res.y+b;
     }
@@ -275,7 +275,7 @@ bool point_is_between(cv::Point2f p0, cv::Point p1, cv::Point p2){
 bool EventPacketProcessor::projects_in(cv::Point p, const LineSegment &ls, float &d){
 //    cv::Point2f pp=project_point_to_line(p, ls.r, ls.th);//projected point
     cv::Point2f pp=project_point_to_line(p, ls);
-    if(point_is_between(pp, ls.p1, ls.p2)){
+    if(point_is_between(pp, ls.p1(), ls.p2())){
         float dx=pp.x-p.x, dy=pp.y-p.y;
         d=sqrt(dx*dx+dy*dy);
         return true;
@@ -290,26 +290,23 @@ bool EventPacketProcessor::compatible_segments(const LineSegment &ls1, const Lin
     if(theta_diff>180*deg_in_rad)//take the minimum difference in orientation
         theta_diff=360*deg_in_rad-theta_diff;
 
-    if(theta_diff>90*deg_in_rad)
-        theta_diff=180*deg_in_rad-theta_diff;
-
-    if(theta_diff>30*deg_in_rad)//if the difference of the line thetas is greater than 30 degrees
+    if(theta_diff>20*deg_in_rad)//if the difference of the line thetas is greater than 30 degrees
         return false;
 
     float d,min_d=std::numeric_limits<float>::max();
-    if(projects_in(ls1.p1,ls2,d)){
+    if(projects_in(ls1.p1(),ls2,d)){
         return true;
         min_d=std::min(d,min_d);
     }
-    if(projects_in(ls1.p2,ls2,d)){
+    if(projects_in(ls1.p2(),ls2,d)){
         return true;
         min_d=std::min(d,min_d);
     }
-    if(projects_in(ls2.p1,ls1,d)){
+    if(projects_in(ls2.p1(),ls1,d)){
         return true;
         min_d=std::min(d,min_d);
     }
-    if(projects_in(ls2.p2,ls1,d)){
+    if(projects_in(ls2.p2(),ls1,d)){
         return true;
         min_d=std::min(d,min_d);
     }
@@ -319,20 +316,20 @@ bool EventPacketProcessor::compatible_segments(const LineSegment &ls1, const Lin
     return false;
 }
 
-void EventPacketProcessor::find_marker_candidates(LineSegments &on_segments, LineSegments &off_segments, vector<MarkerCandidate> &result){
+void EventPacketProcessor::find_marker_candidates(LineSegments &on_segments, LineSegments &off_segments, vector<MarkerCandidate> &result, float min_size){
     result.clear();
     on_segments.sort();
     off_segments.sort();
     for(const LineSegment &on_ls: on_segments.lines){
-        if(on_ls.length<min_segment_size)
+        if(on_ls.length()<min_size)
             continue;
         for(const LineSegment &off_ls: off_segments.lines){
-            if(off_ls.length<min_segment_size)
+            if(off_ls.length()<min_size)
                 continue;
-            if(off_ls.length*2<on_ls.length)
+            if(off_ls.length()*2<on_ls.length())
                 continue;
-            if(off_ls.length>on_ls.length*2)
-                continue;
+            if(off_ls.length()>on_ls.length()*2)
+                break;
             if(compatible_segments(on_ls,off_ls)){
                 result.emplace_back(on_ls,off_ls);
             }
@@ -342,19 +339,106 @@ void EventPacketProcessor::find_marker_candidates(LineSegments &on_segments, Lin
 
 void fix_candidate_segement_dirs(vector<MarkerCandidate> &candidates){
     for(MarkerCandidate candidate:candidates){
-        cv::Vec2f off_vec=candidate.off_ls.p2-candidate.off_ls.p1;
-        cv::Vec2f on_vec=candidate.on_ls.p2-candidate.on_ls.p1;
+        cv::Vec2f off_vec=candidate.off_ls.p2()-candidate.off_ls.p1();
+        cv::Vec2f on_vec=candidate.on_ls.p2()-candidate.on_ls.p1();
         if(off_vec.dot(on_vec)<0){//change the direction of the off segment
-            cv::Point2f tmp=candidate.off_ls.p1;
-            candidate.off_ls.p1=candidate.off_ls.p2;
-            candidate.off_ls.p2=tmp;
+            cv::Point2f tmp=candidate.off_ls.p1();
+            candidate.off_ls.p1()=candidate.off_ls.p2();
+            candidate.off_ls.p2()=tmp;
         }
     }
 }
 
-//void intersect_candidates_and_segments(const vector<MarkerCandidate> &candidates, ){
+int intersect_segments(const LineSegment& ls1, const LineSegment& ls2, cv::Point2f& intersection){
+    cv::Point2f p1=ls1.p1(),p2=ls1.p2(),p3=ls2.p1(),p4=ls2.p2();
+    cv::Point2f v1=p2-p1,v2=p4-p3;
 
-//}
+    cv::Matx22f A;
+    A(0,0)=v1.x; A(0,1)=-v2.x;
+    A(1,0)=v1.y; A(1,1)=-v2.y;
+    cv::Vec2f b=p3-p1;
+    cv::Vec2f coeffs=A.inv()*b;
+    double alpha=coeffs(0);
+    double beta=coeffs(1);
+
+    bool ls1_begin = (alpha>-0.1 && alpha<0.1);
+    bool ls1_end = (alpha>0.9 && alpha<1.1);
+
+    if((ls1_begin||ls1_end) && ((beta>-0.1 && beta<0.1)||(beta>0.9 && beta<1.1))){
+        intersection = p1+alpha*v1;
+        if(ls1_begin)
+            return 1;
+        if(ls1_end)
+            return -1;
+    }
+
+    return 0;
+}
+
+bool find_best_intersection_point(const vector<pair<LineSegment,cv::Point2f>> &input_intersections, cv::Point2f &result){
+    float max_length=-1;
+    for(const pair<LineSegment,cv::Point2f>& intersection:input_intersections){
+        float length=intersection.first.length();
+        if(length>max_length){
+            max_length=length;
+            result=intersection.second;
+        }
+    }
+    if(max_length<0)
+        return false;
+    else
+        return true;
+}
+
+void intersect_candidates_and_segments(vector<MarkerCandidate> &io_candidates, const LineSegments& on_segments, const LineSegments& off_segments){
+    for(MarkerCandidate& candidate:io_candidates){
+        LineSegment candidate_off_ls=candidate.off_ls,candidate_on_ls=candidate.on_ls;
+
+        std::list<LineSegment> all_second_segments;
+        all_second_segments.insert(all_second_segments.end(),on_segments.lines.begin(), on_segments.lines.end());
+        all_second_segments.insert(all_second_segments.end(),off_segments.lines.begin(), off_segments.lines.end());
+
+        vector<pair<LineSegment,cv::Point2f>> on_ls_intersections_begin, on_ls_intersections_end, off_ls_intersections_begin, off_ls_intersections_end;
+
+        cv::Point2f intersection;
+        for(const LineSegment &ls:on_segments.lines){
+            int intersect_dir=intersect_segments(candidate_on_ls,ls,intersection);
+            if(intersect_dir>0){
+                on_ls_intersections_begin.push_back(std::pair<LineSegment,cv::Point2f>(ls,intersection));
+            }
+            else if(intersect_dir<0){
+                on_ls_intersections_end.push_back(std::pair<LineSegment,cv::Point2f>(ls,intersection));
+            }
+
+            intersect_dir=intersect_segments(candidate_off_ls,ls,intersection);
+            if(intersect_dir>0){
+                off_ls_intersections_begin.push_back(std::pair<LineSegment,cv::Point2f>(ls,intersection));
+            }
+            else if(intersect_dir<0){
+                off_ls_intersections_end.push_back(std::pair<LineSegment,cv::Point2f>(ls,intersection));
+            }
+        }
+
+        cv::Point2f intersection_point;
+
+        if(find_best_intersection_point(on_ls_intersections_begin,intersection_point)){
+            candidate.on_ls.set_p1(intersection_point);
+        }
+
+        if(find_best_intersection_point(on_ls_intersections_end,intersection_point)){
+            candidate.on_ls.set_p2(intersection_point);
+        }
+
+        if(find_best_intersection_point(off_ls_intersections_begin,intersection_point)){
+            candidate.off_ls.set_p1(intersection_point);
+        }
+
+        if(find_best_intersection_point(off_ls_intersections_end,intersection_point)){
+            candidate.off_ls.set_p2(intersection_point);
+        }
+
+    }
+}
 
 void draw_marker_candidates(const cv::Mat &in_image, const vector<MarkerCandidate> &candidates, int scale, vector<cv::Mat> &candidate_images, size_t packet_index){
     size_t num_candidates=candidates.size();
@@ -363,17 +447,14 @@ void draw_marker_candidates(const cv::Mat &in_image, const vector<MarkerCandidat
         const MarkerCandidate& candidate=candidates[i];
         cv::Mat image=in_image.clone();
 
-//        cv::line(image,candidate.p[1]*scale,candidate.p[2]*scale,cv::Scalar(255,0,255),3);
-//        cv::line(image,candidate.p[3]*scale,candidate.p[0]*scale,cv::Scalar(255,255,0),3);
+        cv::line(image,candidate.p[0]*scale,candidate.p[1]*scale,cv::Scalar(0,255,255),3);
+        cv::line(image,candidate.p[1]*scale,candidate.p[2]*scale,cv::Scalar(255,0,255),3);
+        cv::line(image,candidate.p[2]*scale,candidate.p[3]*scale,cv::Scalar(255,255,0),3);
+        cv::line(image,candidate.p[3]*scale,candidate.p[0]*scale,cv::Scalar(255,255,255),3);
 
-        cv::line(image,candidate.p[0]*scale,candidate.p[1]*scale,cv::Scalar(255,255,255),2);
-        cv::line(image,candidate.p[1]*scale,candidate.p[2]*scale,cv::Scalar(255,255,255),2);
-        cv::line(image,candidate.p[2]*scale,candidate.p[3]*scale,cv::Scalar(255,255,255),2);
-        cv::line(image,candidate.p[3]*scale,candidate.p[0]*scale,cv::Scalar(255,255,255),2);
-
-//        cv::putText(image,string("on age: ")+to_string(candidate.on_ls.age),cv::Point(0,10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(0,0,255));
-//        cv::putText(image,string("index: ")+to_string(packet_index),cv::Point(150,10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(255,255,255));
-//        cv::putText(image,string("off age: ")+to_string(candidate.off_ls.age),cv::Point(0,image.rows-10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(255,0,0));
+        cv::putText(image,string("on age: ")+to_string(candidate.on_ls.age),cv::Point(0,10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(0,0,255));
+        cv::putText(image,string("index: ")+to_string(packet_index),cv::Point(150,10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(255,255,255));
+        cv::putText(image,string("off age: ")+to_string(candidate.off_ls.age),cv::Point(0,image.rows-10),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(255,0,0));
         candidate_images[i]=image;
     }
 }
@@ -382,8 +463,6 @@ void unwarp_candidates(const cv::Mat &image_on, const cv::Mat &image_off, vector
 
     for(size_t i=0;i<candidates.size();i++){
         cv::Mat pt=cv::getPerspectiveTransform(MarkerCandidate::coords,candidates[i].p);
-        const std::vector<cv::Point2f> &p=candidates[i].p;
-        candidates[i].area=std::abs((p[0].x*p[1].y-p[1].x*p[0].y)+(p[1].x*p[2].y-p[2].x*p[1].y)+(p[2].x*p[3].y-p[3].x*p[2].y)+(p[3].x*p[1].y-p[1].x*p[3].y))/2;
         candidates[i].transform=pt;
         cv::warpPerspective(image_on,candidates[i].image_on,pt,MarkerCandidate::marker_size,cv::INTER_LINEAR+cv::WARP_INVERSE_MAP);
         cv::warpPerspective(image_off,candidates[i].image_off,pt,MarkerCandidate::marker_size,cv::INTER_LINEAR+cv::WARP_INVERSE_MAP);
@@ -413,8 +492,6 @@ void EventPacketProcessor::maskBlur(EventFrame &input){
 }
 
 void EventPacketProcessor::fill_in_frames(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, string video_path){
-
-    std::chrono::high_resolution_clock::time_point before=std::chrono::high_resolution_clock::now(),now;
 
     int max_ts,max_ts_on,max_ts_off;
     max_ts=max_ts_on=max_ts_off=-1;
@@ -458,10 +535,6 @@ void EventPacketProcessor::fill_in_frames(std::shared_ptr<const libcaer::events:
         }
     }
 
-    now=std::chrono::high_resolution_clock::now();
-//    cout<<"------step 0: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
-    before=now;
-
     //claculate statistics about the events*************************************
     size_t num_ts=time_stamps.size();
     //get the average
@@ -483,10 +556,6 @@ void EventPacketProcessor::fill_in_frames(std::shared_ptr<const libcaer::events:
     double half_ts_interval=ts_interval/2;
     mid_ts=min_ts+half_ts_interval;
 
-
-    now=std::chrono::high_resolution_clock::now();
-//    cout<<"------step 1: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
-    before=now;
     //put the appropriate normalized event time stamps in the corresponding matrices********************
     for(const libcaer::events::PolarityEvent &pe:*pep){
 
@@ -524,9 +593,6 @@ void EventPacketProcessor::fill_in_frames(std::shared_ptr<const libcaer::events:
         }
     }
 
-    now=std::chrono::high_resolution_clock::now();
-//    cout<<"------step 2: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
-    before=now;
     //put the average in on_frame and off_frame, calculate on_one_min and off_one_min**************************************
     for(int i=0;i<im_size.height;i++)
         for(int j=0;j<im_size.width;j++){
@@ -563,45 +629,17 @@ void EventPacketProcessor::fill_in_frames(std::shared_ptr<const libcaer::events:
             }
         }
 
-    now=std::chrono::high_resolution_clock::now();
-//    cout<<"------step 3: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
-    before=now;
-
     preprocess(on_one_min);
     maskBlur(on_one_min);
 
     preprocess(off_one_min);
     maskBlur(off_one_min);
 
-//    for(int i=0;i<im_size.height;i++)
-//        for(int j=0;j<im_size.width;j++){
-//            if(on_one_min.mask[i][j]>0){
-//                on_min.image[i][j]=1.0-on_one_min.image[i][j];
-//                on_min.mask[i][j]=1;
-//            }
-//            else{
-//                on_min.image[i][j]=0;
-//                on_min.mask[i][j]=0;
-//            }
+    preprocess(off_min);
+    maskBlur(off_min);
 
-//            if(off_one_min.mask[i][j]>0){
-//                off_min.image[i][j]=1.0-off_one_min.image[i][j];
-//                off_min.mask[i][j]=1;
-//            }
-//            else{
-//                off_min.image[i][j]=0;
-//                off_min.mask[i][j]=0;
-//            }
-//        }
-
-//    preprocess(off_min);
-//    maskBlur(off_min);
-
-//    preprocess(on_min);
-//    maskBlur(on_min);
-    now=std::chrono::high_resolution_clock::now();
-//    cout<<"------step 4: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
-    before=now;
+    preprocess(on_min);
+    maskBlur(on_min);
 }
 
 void EventPacketProcessor::erase_frames(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep){
@@ -682,8 +720,8 @@ void EventPacketProcessor::segment_lines(cv::Mat m, const LineSegments &end_poin
         mat_array[i]=m.ptr<char>(i);
 
     for(const LineSegment &line: end_points.lines){
-        int dx=line.p2.x-line.p1.x;
-        int dy=line.p2.y-line.p1.y;
+        int dx=line.p2().x-line.p1().x;
+        int dy=line.p2().y-line.p1().y;
         int num_steps=std::max(dx,dy);
         if(num_steps==0)
             continue;
@@ -696,8 +734,8 @@ void EventPacketProcessor::segment_lines(cv::Mat m, const LineSegments &end_poin
 
         cv::Point first_pixel,last_pixel;
         for(int s=0;s<num_steps;s++){
-            int x=line.p1.x+std::round(x_step*s);
-            int y=line.p1.y+std::round(y_step*s);
+            int x=line.p1().x+std::round(x_step*s);
+            int y=line.p1().y+std::round(y_step*s);
 
             if(mat_array[y][x]){
                 gap_pixels=0;
@@ -730,7 +768,7 @@ void EventPacketProcessor::segment_lines(cv::Mat m, const LineSegments &end_poin
 
 void EventPacketProcessor::draw_segments(cv::Mat &im, LineSegments &segments, cv::Scalar color, int scale){
     for(LineSegment &line: segments.lines)
-        cv::line(im,line.p1*scale,line.p2*scale,color,7);
+        cv::line(im,line.p1()*scale,line.p2()*scale,color,3);
 }
 
 void EventPacketProcessor::candidate_detector_hough(const cv::Mat& edge_frame_filtered, const cv::Mat& on_frame_filtered, const cv::Mat& off_frame_filtered, cv::Mat& edge_frame_processed_big, LineSegments& on_segments, LineSegments& off_segments, bool display){
@@ -765,8 +803,8 @@ cv::Mat make_displayable(const cv::Mat &input, float scale, cv::Size size=cv::Si
 }
 
 float EventPacketProcessor::calcLineAge(const EventFrame &ei, const LineSegment& ls){
-    float x_length=ls.p2.x-ls.p1.x;
-    float y_length=ls.p2.y-ls.p1.y;
+    float x_length=ls.p2().x-ls.p1().x;
+    float y_length=ls.p2().y-ls.p1().y;
     int steps=std::round(std::max(std::abs(x_length),std::abs(y_length)));
     float x_step=x_length/steps;
     float y_step=y_length/steps;
@@ -774,8 +812,8 @@ float EventPacketProcessor::calcLineAge(const EventFrame &ei, const LineSegment&
     float average_age=0;
     int num_points=0;
     for(int i=0;i<=steps;i++){
-        int x = std::round(ls.p1.x+x_step*i);
-        int y = std::round(ls.p1.y+y_step*i);
+        int x = std::round(ls.p1().x+x_step*i);
+        int y = std::round(ls.p1().y+y_step*i);
         if(ei.mask[y][x]){
             average_age+=ei.image[y][x];
             num_points++;
@@ -804,9 +842,6 @@ void EventPacketProcessor::detect_line_segments(const EventFrame &input, LineSeg
         cv::Point2f p1(res[index],res[index+1]),p2(res[index+2],res[index+3]);
         cv::Point2f diff=p2-p1;
         float theta=std::atan(diff.y/diff.x),length=cv::norm(diff);
-
-        if(length<min_segment_size)
-            continue;
 //        p1+=(-diff)/length*4;//extend it 4 pixels
 //        p2+=(diff)/length*4;//extend it 4 pixels
 
@@ -821,30 +856,29 @@ void EventPacketProcessor::detect_line_segments(const EventFrame &input, LineSeg
 void EventPacketProcessor::move_segments(const EventFrame &age_frame, LineSegments &line_segments, float goal_age){
     for(LineSegment &ls:line_segments.lines){
         double x_offset,y_offset;
-//        cout<<ls.age;
+        cout<<ls.age;
         find_line_offset(age_frame, ls, goal_age, x_offset, y_offset);
 //        cout<<"x_offset: "<<x_offset<<endl;
 //        cout<<"y_offset: "<<y_offset<<endl;
         if(x_offset>=0){
-            x_offset=std::min(x_offset,(double)std::min(age_frame.cols()-1-ls.p2.x,age_frame.cols()-1-ls.p1.x));
+            x_offset=std::min(x_offset,(double)std::min(age_frame.cols()-1-ls.p2().x,age_frame.cols()-1-ls.p1().x));
         }
         else{
-            x_offset=std::max(x_offset,(double)std::max(-ls.p2.x,-ls.p1.x));
+            x_offset=std::max(x_offset,(double)std::max(-ls.p2().x,-ls.p1().x));
         }
         if(y_offset>=0){
-            y_offset=std::min(y_offset,(double)std::min(age_frame.rows()-1-ls.p2.y,age_frame.rows()-1-ls.p1.y));
+            y_offset=std::min(y_offset,(double)std::min(age_frame.rows()-1-ls.p2().y,age_frame.rows()-1-ls.p1().y));
         }
         else{
-            y_offset=std::max(y_offset,(double)std::max(-ls.p2.y,-ls.p1.y));
+            y_offset=std::max(y_offset,(double)std::max(-ls.p2().y,-ls.p1().y));
         }
 
-        ls.p1.x+=x_offset;
-        ls.p2.x+=x_offset;
-        ls.p1.y+=y_offset;
-        ls.p2.y+=y_offset;
+        ls.set_p1(cv::Point2f(ls.p1().x+x_offset,ls.p1().y+y_offset));
+
+        ls.set_p2(cv::Point2f(ls.p2().x+x_offset,ls.p2().y+y_offset));
 
         ls.age=calcLineAge(age_frame, ls);
-//        cout<<"===>"<<ls.age<<endl;
+        cout<<"===>"<<ls.age<<endl;
     }
 }
 
@@ -861,8 +895,8 @@ void EventPacketProcessor::expand_segments(const EventFrame &age_frame, LineSegm
 }
 
 void EventPacketProcessor::expand_segment(const EventFrame &age_frame, LineSegment &ls){
-    float x_length=ls.p2.x-ls.p1.x;
-    float y_length=ls.p2.y-ls.p1.y;
+    float x_length=ls.p2().x-ls.p1().x;
+    float y_length=ls.p2().y-ls.p1().y;
     int steps=std::round(std::max(std::abs(x_length),std::abs(y_length)));
     float x_step=x_length/steps;
     float y_step=y_length/steps;
@@ -870,9 +904,9 @@ void EventPacketProcessor::expand_segment(const EventFrame &age_frame, LineSegme
     cv::Point2f start_point,end_point,prev_point;
 
     //expand the begining
-    prev_point=ls.p1;
+    prev_point=ls.p1();
     for(int i=0;;i--){
-        cv::Point2f curr_point(ls.p1.x+x_step*i,ls.p1.y+y_step*i);
+        cv::Point2f curr_point(ls.p1().x+x_step*i,ls.p1().y+y_step*i);
         int x = std::round(curr_point.x);
         int y = std::round(curr_point.y);
         if(x>=0 && x<age_frame.cols() && y>=0 && y<age_frame.rows()){//if x and y are in range
@@ -888,9 +922,9 @@ void EventPacketProcessor::expand_segment(const EventFrame &age_frame, LineSegme
         prev_point=curr_point;
     }
 
-    prev_point=ls.p2;
+    prev_point=ls.p2();
     for(int i=steps;;i++){
-        cv::Point2f curr_point(ls.p1.x+x_step*i,ls.p1.y+y_step*i);
+        cv::Point2f curr_point(ls.p1().x+x_step*i,ls.p1().y+y_step*i);
         int x = std::round(curr_point.x);
         int y = std::round(curr_point.y);
         if(x>=0 && x<age_frame.cols() && y>=0 && y<age_frame.rows()){//if x and y are in range
@@ -906,13 +940,13 @@ void EventPacketProcessor::expand_segment(const EventFrame &age_frame, LineSegme
         prev_point=curr_point;
     }
 
-    ls.p1=start_point;
-    ls.p2=end_point;
+    ls.p1()=start_point;
+    ls.p2()=end_point;
 }
 
 void EventPacketProcessor::trim_segment(const EventFrame &age_frame, LineSegment &ls){
-    float x_length=ls.p2.x-ls.p1.x;
-    float y_length=ls.p2.y-ls.p1.y;
+    float x_length=ls.p2().x-ls.p1().x;
+    float y_length=ls.p2().y-ls.p1().y;
     int steps=std::round(std::max(std::abs(x_length),std::abs(y_length)));
     float x_step=x_length/steps;
     float y_step=y_length/steps;
@@ -921,7 +955,7 @@ void EventPacketProcessor::trim_segment(const EventFrame &age_frame, LineSegment
     cv::Point2f start_point,end_point,prev_point,prev_prev_point;
 
     for(int i=0;i<=steps;i++){
-        cv::Point2f curr_point(ls.p1.x+x_step*i,ls.p1.y+y_step*i);
+        cv::Point2f curr_point(ls.p1().x+x_step*i,ls.p1().y+y_step*i);
         int x = std::round(curr_point.x);
         int y = std::round(curr_point.y);
         if(age_frame.mask[y][x]){
@@ -944,49 +978,60 @@ void EventPacketProcessor::trim_segment(const EventFrame &age_frame, LineSegment
     }
 
     if(has_started && has_ended){
-        ls.p1=start_point;
-        ls.p2=end_point;
+        ls.p1()=start_point;
+        ls.p2()=end_point;
     }
 
 }
 
-void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index){
+cv::Vec2f EventPacketProcessor::find_movement_dir(const EventPacketProcessor::EventFrame &on_one_min, const EventPacketProcessor::EventFrame &off_one_min){
+    return (calcGradient(on_one_min)+calcGradient(off_one_min))/2;
+}
 
-    char index_str[100];
-    sprintf(index_str,"%04d",curr_index);
+cv::Vec2f EventPacketProcessor::calcGradient(const EventPacketProcessor::EventFrame &one_min){
+    cv::Mat dx_im,dy_im;
+    cv::Scharr(one_min.image.mat,dx_im,CV_32F,1,0);
+    cv::Scharr(one_min.image.mat,dy_im,CV_32F,0,1);
+
+    cv::Mat eroded_mask;
+    cv::erode(one_min.mask.mat,eroded_mask,cv::Mat());
+
+    cv::Vec2f gradient(0,0);
+
+    if(!eroded_mask.empty()){
+        gradient[0]=cv::mean(dx_im,eroded_mask)[0];
+        gradient[1]=cv::mean(dy_im,eroded_mask)[0];
+    }
+
+    return gradient;
+}
+
+void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index){
 
     frame_num++;
     if(frame_num%skip_every_frames!=0)
         return;
 
-    std::chrono::high_resolution_clock::time_point before,now,very_begining;
-    very_begining=std::chrono::high_resolution_clock::now();
-
     dvsn->apply(&(*pep));//denoise
 
     //draw changed pixels on the frame
-    //print filter run time
-//    now=std::chrono::high_resolution_clock::now();
-//    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<" ";
-//    before=now;
-
-//    if(cv::waitKey(0)=='c'){
-//        fill_in_frames(pep/*,"frame.avi"*/);
-//    }
-//    else{
+    std::chrono::high_resolution_clock::time_point before=std::chrono::high_resolution_clock::now(),now;
+    if(cv::waitKey(0)=='c'){
+        fill_in_frames(pep/*,"frame.avi"*/);
+    }
+    else{
         fill_in_frames(pep);
-//    }
+    }
 
-    bool display = false;
+    bool display = true;
 
     cv::Mat on_one_min_8uc, off_one_min_8uc;
-
-    //print denoising and event image creation time
-    before=std::chrono::high_resolution_clock::now();
 
     LineSegments on_segments,off_segments;
     on_one_min.image.mat.convertTo(on_one_min_8uc,CV_8UC1,255);
     off_one_min.image.mat.convertTo(off_one_min_8uc,CV_8UC1,255);
+
+    cv::Vec2f movement_dir=find_movement_dir(on_one_min,off_one_min);
     //detect the line segments (also calculates the ages)
     detect_line_segments(on_one_min, on_segments);
     detect_line_segments(off_one_min, off_segments);
@@ -997,59 +1042,43 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
 //    trim_segments(off_min, off_segments);
     move_segments(off_min, off_segments, 0.5);
 
-    vector<MarkerCandidate> candidates;
-    find_marker_candidates(on_segments, off_segments, candidates);
-
-    //print line segment detection, age correction and candidate formation time
-    now=std::chrono::high_resolution_clock::now();
-    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<", ";
-    before=now;
-
     //draw the line segments
     int scale=5;
-    cv::Mat on_one_min_display;
+    cv::Mat on_one_min_display=make_displayable(on_one_min_8uc,scale);
+    draw_segments(on_one_min_display,on_segments,cv::Scalar(0,0,255),scale);
 
-    if(display){
-        on_one_min_display=make_displayable(on_one_min_8uc,scale);
-        draw_segments(on_one_min_display,on_segments,cv::Scalar(0,0,255),scale);
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_on_one_min.png",on_one_min_display);
-        cv::imshow("on_one_min",on_one_min_display);
-    }
+    cv::Point arrow_position(on_one_min_display.cols/2,on_one_min_display.rows/2);
+    cv::Vec2f arrow_dir=movement_dir/cv::norm(movement_dir)*on_one_min_display.cols/4;
+    cv::Point arrow_direction(arrow_dir[0],arrow_dir[1]);
 
-    cv::Mat off_one_min_display;
+    cv::arrowedLine(on_one_min_display,arrow_position,arrow_direction,cv::Scalar(255,255,255),3);
+    cv::imshow("on_one_min",on_one_min_display);
 
-    if(display){
-        off_one_min_display=make_displayable(off_one_min_8uc,scale);
-        draw_segments(off_one_min_display,off_segments,cv::Scalar(255,0,0),scale);
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_off_one_min.png",off_one_min_display);
-        cv::imshow("off_one_min",off_one_min_display);
-    }
+    cv::Mat off_one_min_display=make_displayable(off_one_min_8uc,scale);
+    draw_segments(off_one_min_display,off_segments,cv::Scalar(255,0,0),scale);
+    cv::imshow("off_one_min",off_one_min_display);
 
-    cv::Mat curr_display_frame;
+    cv::Mat curr_display_frame(display_frame.rows,0,CV_8UC3);
 
     cv::Mat edge_frame_processed_big;
 //    candidate_detector_hough(edge_frame_filtered, on_frame_filtered, off_frame_filtered, edge_frame_processed_big, on_segments, off_segments, display);
 //    keylines2linesegments(on_min_keylines,on_segments);
 //    keylines2linesegments(off_min_keylines,off_segments);
 
+    now=std::chrono::high_resolution_clock::now();
+    cout<<"step 3: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
+    before=now;
+
+    vector<MarkerCandidate> candidates;
+    find_marker_candidates(on_segments, off_segments, candidates, 50);
+
+    intersect_candidates_and_segments(candidates, on_segments, off_segments);
+
     cv::Mat display_frame_on_lines,display_frame_off_lines,display_frame_lines;
     cv::Mat display_frame_detections;
 
     vector<cv::Mat> candidate_images;
-
-    cv::Mat on_min_8u,off_min_8u,on_frame_8u,off_frame_8u;
-
-    on_min.image.mat.convertTo(on_min_8u,CV_8UC1,255);
-    off_min.image.mat.convertTo(off_min_8u,CV_8UC1,255);
-//    on_frame.image.mat.convertTo(on_frame_8u,CV_8UC1,255);
-//    off_frame.image.mat.convertTo(off_frame_8u,CV_8UC1,255);
-
-    cv::Mat im_show_off, im_show_on;
-    cv::Mat code_image, candidates_im;
-    cv::Mat image;
-
     if(display){
-        curr_display_frame=cv::Mat(display_frame.rows,0,CV_8UC3);
         cv::resize(off_frame.image.mat,display_frame_off_lines,cv::Size(0,0),display_scale,display_scale,cv::INTER_NEAREST);
         cv::resize(on_frame.image.mat,display_frame_on_lines,cv::Size(0,0),display_scale,display_scale,cv::INTER_NEAREST);
 
@@ -1059,77 +1088,78 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
         draw_marker_candidates(display_frame,candidates,display_scale,candidate_images,curr_index);
 
         cv::imshow("candidates",display_frame_detections);
-
-
-        draw_segments(display_frame_lines,off_segments,cv::Scalar(255,0,0),display_scale);
-        draw_segments(display_frame_lines,on_segments,cv::Scalar(0,0,255),display_scale);
-
-        cv::hconcat(curr_display_frame,display_frame_lines/*display_frame_detections*/,curr_display_frame);
-
-        image=cv::Mat(128*5,128*5,CV_8UC3,cv::Scalar(255,255,255));
-
-        candidates_im=cv::Mat(0,display_size.width,CV_8UC3);
-
-        cv::Mat on_min_mask=make_displayable(on_min.mask.mat,5);
-        cv::Mat on_one_min_mask=make_displayable(on_one_min.mask.mat,5);
-        cv::Mat on_one_min_image=make_displayable(on_one_min.image.mat,5);
-        cv::Mat on_min_image=make_displayable(on_min.image.mat,5);
-        cv::Mat on_mask=make_displayable(on_frame.mask.mat,5);
-
-        cv::imshow("on_min_mask",on_min_mask);
-        cv::imshow("on_one_min_mask",on_one_min_mask);
-        cv::imshow("on_min",on_min_image);
-        cv::imshow("one_one_min",on_one_min_image);
-        cv::imshow("on_frame_mask",on_mask);
     }
 
-    unwarp_candidates(on_min_8u,off_min_8u,candidates);
-    //print unwarping time
-    now=std::chrono::high_resolution_clock::now();
-    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<", ";
-    before=now;
+    draw_segments(display_frame_lines,off_segments,cv::Scalar(255,0,0),display_scale);
+    draw_segments(display_frame_lines,on_segments,cv::Scalar(0,0,255),display_scale);
 
-//    std::sort(candidates.begin(),candidates.end(),[](const MarkerCandidate& a, const MarkerCandidate& b)->bool{return a.area < b.area;});
+    cv::hconcat(curr_display_frame,display_frame_lines/*display_frame_detections*/,curr_display_frame);
+
+    cv::Mat on_min_8u,off_min_8u,on_frame_8u,off_frame_8u;
+
+    on_min.image.mat.convertTo(on_min_8u,CV_8UC1,255);
+    off_min.image.mat.convertTo(off_min_8u,CV_8UC1,255);
+    on_frame.image.mat.convertTo(on_frame_8u,CV_8UC1,255);
+    off_frame.image.mat.convertTo(off_frame_8u,CV_8UC1,255);
+
+    cv::Mat image(128*5,128*5,CV_8UC3,cv::Scalar(255,255,255));
+
+    cv::Mat im_show_off,im_show_on;
+
+    cv::Mat code_image;
+
+    cv::Mat candidates_im(0,display_size.width,CV_8UC3);
+
+    cv::Mat on_min_mask=make_displayable(on_min.mask.mat,5);
+    cv::Mat on_one_min_mask=make_displayable(on_one_min.mask.mat,5);
+    cv::Mat on_one_min_image=make_displayable(on_one_min.image.mat,5);
+    cv::Mat on_min_image=make_displayable(on_min.image.mat,5);
+    cv::Mat on_mask=make_displayable(on_frame.mask.mat,5);
+
+    cv::imshow("on_min_mask",on_min_mask);
+    cv::imshow("on_one_min_mask",on_one_min_mask);
+    cv::imshow("on_min",on_min_image);
+    cv::imshow("one_one_min",on_one_min_image);
+    cv::imshow("on_frame_mask",on_mask);
+
+    unwarp_candidates(on_min_8u,off_min_8u,candidates);
 
     for(size_t i=0;i<candidates.size();i++){
         candidates[i].decode_candidate();
 
-        if(display/* && i<5*/){
+        if(display && i<5){
             cv::Mat candidates_row(display_size.height,0,CV_8UC3);
 
             im_show_off=make_displayable(candidates[i].image_off,0,display_size);
             im_show_on=make_displayable(candidates[i].image_on,0,display_size);
             code_image=make_displayable(candidates[i].code_im*255,0,display_size);
 
-            cv::hconcat(candidates_row,display_frame,candidates_row);
-            cv::hconcat(candidates_row,candidate_images[i],candidates_row);
-            cv::hconcat(candidates_row,im_show_on,candidates_row);
-            cv::hconcat(candidates_row,im_show_off,candidates_row);
-
             float eightth_height=display_size.height/8.0;
             float eightth_width=display_size.width/8.0;
-            for(int i=1;i<8;i++){
+            for(int i=0;i<8;i++){
                 int width=1;
-//                if(i==0)
-//                    width=3;
-                cv::line(im_show_off,cv::Point(eightth_height,eightth_height*i),cv::Point(display_size.width-eightth_height,eightth_height*i),cv::Scalar(0,0,255),width);
-                cv::line(im_show_on,cv::Point(eightth_height,eightth_height*i),cv::Point(display_size.width-eightth_height,eightth_height*i),cv::Scalar(0,0,255),width);
-                cv::line(code_image,cv::Point(eightth_height,eightth_height*i),cv::Point(display_size.width-eightth_height,eightth_height*i),cv::Scalar(0,0,255),width);
-                cv::line(im_show_off,cv::Point(eightth_width*i,eightth_height),cv::Point(eightth_width*i,display_size.height-eightth_height),cv::Scalar(0,0,255),width);
-                cv::line(im_show_on,cv::Point(eightth_width*i,eightth_height),cv::Point(eightth_width*i,display_size.height-eightth_height),cv::Scalar(0,0,255),width);
-                cv::line(code_image,cv::Point(eightth_width*i,eightth_height),cv::Point(eightth_width*i,display_size.height-eightth_height),cv::Scalar(0,0,255),width);
+                if(i==0)
+                    width=3;
+                cv::line(im_show_off,cv::Point(0,eightth_height*i),cv::Point(display_size.width-1,eightth_height*i),cv::Scalar(0,0,255),width);
+                cv::line(im_show_on,cv::Point(0,eightth_height*i),cv::Point(display_size.width-1,eightth_height*i),cv::Scalar(0,0,255),width);
+                cv::line(code_image,cv::Point(0,eightth_height*i),cv::Point(display_size.width-1,eightth_height*i),cv::Scalar(0,0,255),width);
+                cv::line(im_show_off,cv::Point(eightth_width*i,0),cv::Point(eightth_width*i,display_size.height-1),cv::Scalar(0,0,255),width);
+                cv::line(im_show_on,cv::Point(eightth_width*i,0),cv::Point(eightth_width*i,display_size.height-1),cv::Scalar(0,0,255),width);
+                cv::line(code_image,cv::Point(eightth_width*i,0),cv::Point(eightth_width*i,display_size.height-1),cv::Scalar(0,0,255),width);
             }
 
             cv::Mat off_scores=candidates[i].off_score_im;
             for(int r=1;r<off_scores.rows-1;r++)
                 for(int c=1;c<off_scores.cols-1;c++)
-                    cv::putText(im_show_off,to_string(off_scores.at<uchar>(r,c)),cv::Point(eightth_width*(c)+eightth_width/4,eightth_height*r+eightth_height/2),cv::FONT_HERSHEY_PLAIN,0.75,cv::Scalar(0,255,0),1);
+                    cv::putText(im_show_off,to_string(off_scores.at<uchar>(r,c)),cv::Point(eightth_width*c+eightth_width/2,eightth_height*r+eightth_height/2),cv::FONT_HERSHEY_PLAIN,0.75,cv::Scalar(0,255,0),1);
 
             cv::Mat on_scores=candidates[i].on_score_im;
             for(int r=1;r<on_scores.rows-1;r++)
                 for(int c=1;c<on_scores.cols-1;c++)
-                    cv::putText(im_show_on,to_string(on_scores.at<uchar>(r,c)),cv::Point(eightth_width*(c)+eightth_width/4,eightth_height*r+eightth_height/2),cv::FONT_HERSHEY_PLAIN,0.75,cv::Scalar(0,255,0),1);
+                    cv::putText(im_show_on,to_string(on_scores.at<uchar>(r,c)),cv::Point(eightth_width*c+eightth_width/2,eightth_height*r+eightth_height/2),cv::FONT_HERSHEY_PLAIN,0.75,cv::Scalar(0,255,0),1);
 
+
+            cv::hconcat(candidates_row,candidate_images[i],candidates_row);
             cv::hconcat(candidates_row,im_show_on,candidates_row);
             cv::hconcat(candidates_row,im_show_off,candidates_row);
             cv::hconcat(candidates_row,code_image,candidates_row);
@@ -1147,11 +1177,7 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
             }
         }
 
-        if(display && candidates[i].marker_index!=-1){
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_on.png", im_show_on);
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_off.png", im_show_off);
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidate_image.png",candidate_images[i]);
-
+        if(candidates[i].marker_index!=-1){
             candidates[i].code_im.copyTo(code_image);
 
             cv::resize(code_image*255,code_image,MarkerCandidate::marker_size,0,0,cv::INTER_NEAREST);
@@ -1168,41 +1194,39 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
         }
     }
 
-    //marker reconstruction and code lookup time
+    if(candidates_im.rows>0)
+        cv::imshow("candidates_im",candidates_im);
+
     now=std::chrono::high_resolution_clock::now();
-    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<", ";
+    cout<<"step 6: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
     before=now;
 
-    if(display && candidates_im.rows>0){
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidates_im.png",candidates_im);
-        cv::imshow("candidates_im",candidates_im);
+    cv::imshow("image",image);
+
+    now=std::chrono::high_resolution_clock::now();
+    cout<<"step 6.5: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
+    before=now;
+
+    char c=cv::waitKey(1);
+
+    now=std::chrono::high_resolution_clock::now();
+    cout<<"step 7: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
+    before=now;
+    if(c=='s'){//save the images
+        cv::imwrite("events.png",display_frame);
+        cv::imwrite("edge_frame_processed_big.png",edge_frame_processed_big);
+        cv::imwrite("frame_candidates.png",display_frame_detections);
+        cv::imwrite("line_segments.png",display_frame_lines);
+        cv::imwrite("unwarped_off.png",im_show_on);
+        cv::imwrite("unwarped_on.png",im_show_off);
+        cv::imwrite("code_image.png",code_image);
+        cv::imwrite("final_overlay.png",image);
     }
-
-    if(display){
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_display_frame.png",display_frame);
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_image.png",image);
-        cv::imshow("image",image);
-    }
-
-    char c=0;
-
-    if(display)
-        cv::waitKey(5);
-
-//    if(c=='s'){//save the images
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_events.png",display_frame);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_edge_frame_processed_big.png",edge_frame_processed_big);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_frame_candidates.png",display_frame_detections);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_line_segments.png",display_frame_lines);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_unwarped_off.png",im_show_on);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_unwarped_on.png",im_show_off);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_code_image.png",code_image);
-//        cv::imwrite("/home/hamid/event_aruco/"+to_string(frame_num)+"_final_overlay.png",image);
-//    }
 
     erase_frames(pep);
 
     now=std::chrono::high_resolution_clock::now();
-    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now-very_begining).count()<<endl;
+    cout<<"step 8: "<<std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count()<<"s"<<endl;
     before=now;
+
 }

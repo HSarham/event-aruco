@@ -4,22 +4,52 @@
 #include <list>
 
 struct LineSegment{
-    cv::Point2f p1,p2;
+
     float r,th;
     int event_type;
-    float length;
+
     float age;
     LineSegment(){}
-    LineSegment(const cv::Point2f &point1, const cv::Point2f &point2, float rho, float theta, float l=-1){
-        p1=point1;
-        p2=point2;
+    LineSegment(const cv::Point2f &in_p1, const cv::Point2f &in_p2, float rho, float theta, float l=-1){
+        point1=in_p1;
+        point2=in_p2;
         r=rho;
         th=theta;
-        length=l;
+    }
+    LineSegment(const LineSegment &input){
+        r=input.r;
+        th=input.th;
+        event_type=input.event_type;
+        age=input.age;
+        point1=input.p1();
+        point2=input.p2();
+    }
+    cv::Point2f p1() const{
+        return point1;
+    }
+    cv::Point2f p2() const{
+        return point2;
+    }
+    void set_p1(cv::Point2f in_p){
+        point1=in_p;
+        len=-1;
+    }
+    void set_p2(cv::Point2f in_p){
+        point2=in_p;
+        len=-1;
+    }
+    float length() const{
+        if(len<0){
+            len=cv::norm(point1-point2);
+        }
+        return len;
     }
     bool operator < (const LineSegment& ls2) const{
-        return length < ls2.length;
+        return len < ls2.len;
     }
+private:
+    cv::Point2f point1,point2;
+    mutable float len=-1;
 };
 
 struct LineSegments{
@@ -40,7 +70,6 @@ class MarkerCandidate
 {
 public:
 
-    double area=0;
     const static int cell_size=20;
     const static int border_radius=1;//cell_size/3;
     const static int threshold_on_pixels=55;//(255*cell_size/3.0)*1.0/3.0;//(cell_size*(border_radius*2+1))/2;
