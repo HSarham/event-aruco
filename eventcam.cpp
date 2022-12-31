@@ -198,7 +198,7 @@ void EventCam::liveView(std::vector<std::unique_ptr<libcaer::events::EventPacket
                     std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity
                             = std::static_pointer_cast<libcaer::events::PolarityEventPacket>(packet);
                     //visualize the packet
-                    cv::cvtColor(pv.visualize(polarity),rgb,CV_BGR2RGB);
+                    cv::cvtColor(pv.visualize(polarity),rgb,cv::COLOR_BGR2RGB);
                     lw->setImage(rgb);
                 }
             }
@@ -216,7 +216,7 @@ void EventCam::player(atomic_bool *playing, LiveView* window, vector<long long i
     std::vector<std::shared_ptr<libcaer::events::PolarityEventPacket>> &packets=*packets_p;
     vector<long long int> &time_stamps=*time_stamps_p;
     for(size_t i=0;i<packets.size() && *playing;i++){
-        cv::cvtColor(pv.visualize(packets[i]),rgb,CV_BGR2RGB);
+        cv::cvtColor(pv.visualize(packets[i]),rgb,cv::COLOR_BGR2RGB);
         window->setImage(rgb);
         if(i<packets.size()-1)//to make the frame rate according to the time stamps
             this_thread::sleep_for(chrono::milliseconds((time_stamps[i+1]-time_stamps[i]-1)*s));
@@ -373,8 +373,7 @@ void EventCam::openCam(){
         struct caer_dvs128_info dvs128_info = cam_handle->infoGet();
 
         printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Logic: %d.\n", dvs128_info.deviceString,
-            dvs128_info.deviceID, dvs128_info.deviceIsMaster, dvs128_info.dvsSizeX, dvs128_info.dvsSizeY,
-            dvs128_info.logicVersion);
+            dvs128_info.deviceID, dvs128_info.deviceIsMaster, dvs128_info.dvsSizeX, dvs128_info.dvsSizeY);
 
 
         // Send the default configuration before using the device.

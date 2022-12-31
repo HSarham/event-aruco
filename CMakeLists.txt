@@ -1,13 +1,16 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.8)
 project(event_aruco)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(libcaer REQUIRED)
-find_package(OpenCV 3.2 REQUIRED)
+find_package(OpenCV 4.6 REQUIRED)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
-include_directories(${libcaer_INCLUDE_DIRS} 3rdparty ${Qt5Widgets_INCLUDE_DIRS})
+include_directories(${libcaer_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} 3rdparty ${Qt5Widgets_INCLUDE_DIRS})
 add_subdirectory(3rdparty)
 
 add_library(markercandidate markercandidate.cpp)
@@ -23,12 +26,12 @@ add_library(liveview liveview.cpp)
 add_library(eventcam eventcam.cpp)
 target_link_libraries(eventcam libcaer::caer liveview)
 
-add_library(filesystem filesystem.cpp)
+add_library(filesystem_extra filesystem.cpp)
 
 
 add_library(idscam idscam.cpp)
 find_library(ueye ueye_api)
-target_link_libraries(idscam ${ueye} liveview filesystem)
+target_link_libraries(idscam ${ueye} liveview filesystem_extra)
 
 add_executable(rgbe_recorder rgbe_recorder.cpp)
 target_link_libraries(rgbe_recorder ${ueye} ${OpenCV_LIBS} ${Qt5Widgets_LIBRARIES} idscam eventcam)

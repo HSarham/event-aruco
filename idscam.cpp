@@ -82,7 +82,7 @@ void IDSCam::player(atomic_bool *playing, LiveView* window, string folder_path, 
         vector<cv::Mat> &frames=*frames_p;
         vector<long long int> &time_stamps=*time_stamps_p;
         for(size_t i=0;i<frames.size() && *playing;i++){
-            cv::cvtColor(frames[i],rgb,CV_BGR2RGB);
+            cv::cvtColor(frames[i],rgb,cv::COLOR_BGR2RGB);
             window->setImage(rgb);
             if(i<frames.size()-1)//to make the frame rate according to the time stamps
                 this_thread::sleep_for(chrono::milliseconds((time_stamps[i+1]-time_stamps[i]-1)*s));
@@ -98,7 +98,7 @@ void IDSCam::player(atomic_bool *playing, LiveView* window, string folder_path, 
         }
 
         //get the list of files and sort them
-        std::vector<string> file_names=filesystem::get_files_list(folder_path);
+        std::vector<string> file_names=filesystem_extra::get_files_list(folder_path);
         std::sort(file_names.begin(),file_names.end());
 
         long long int prev_ts=-1;
@@ -113,7 +113,7 @@ void IDSCam::player(atomic_bool *playing, LiveView* window, string folder_path, 
                 //update the prev_ts
                 prev_ts=ts;
                 //show the image
-                cv::cvtColor(im,rgb,CV_BGR2RGB);
+                cv::cvtColor(im,rgb,cv::COLOR_BGR2RGB);
                 window->setImage(rgb);
 
                 //take the timestamp
@@ -149,7 +149,7 @@ void IDSCam::loadFrames(string folder_path){
     frames.clear();
     time_stamps.clear();
 
-    std::vector<string> file_names=filesystem::get_files_list(folder_path);
+    std::vector<string> file_names=filesystem_extra::get_files_list(folder_path);
 
     std::sort(file_names.begin(),file_names.end());
 

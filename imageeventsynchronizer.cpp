@@ -7,7 +7,7 @@ using namespace std;
 ImageEventSynchronizer::ImageEventSynchronizer(string in_folder_path)
 {
     dataset_folder_path=in_folder_path;
-    image_file_names=filesystem::get_files_list(dataset_folder_path);
+    image_file_names=filesystem_extra::get_files_list(dataset_folder_path);
     std::sort(image_file_names.begin(),image_file_names.end());
 
     EventCam ec(NULL,0);

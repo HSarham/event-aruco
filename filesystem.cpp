@@ -1,34 +1,34 @@
 #include "filesystem.h"
+#include <stdexcept>
+#include <filesystem>
 
-namespace filesystem {
 
-std::vector<std::string> get_dirs_list(std::string path){
-    std::vector<std::string> result;
-    DIR *dir=opendir(path.c_str());
+namespace filesystem_extra {
 
-    if(dir!=NULL){
-        for(dirent *entry=readdir(dir);entry!=NULL;entry=readdir(dir))
-            if(entry->d_type == DT_DIR)
-                result.push_back(entry->d_name);
-        closedir(dir);
+    std::vector<std::string> get_dirs_list(std::filesystem::path path){
+        std::vector<std::string> result;
+        if (!std::filesystem::is_directory(path))
+            throw std::runtime_error("Input directory does not exist!");
+
+        for(auto const& entry : std::filesystem::directory_iterator(path))
+            if(entry.is_directory())
+                result.push_back(entry.path());
+
+
+        return result;
     }
 
-    return result;
-}
+    std::vector<std::string> get_files_list(std::string path){
+        std::vector<std::string> result;
+        if (!std::filesystem::is_directory(path))
+            throw std::runtime_error("Input directory does not exist!");
 
-std::vector<std::string> get_files_list(std::string path){
-    std::vector<std::string> result;
-    DIR *dir=opendir(path.c_str());
+        for(auto const& entry : std::filesystem::directory_iterator(path))
+            if(entry.is_regular_file())
+                result.push_back(entry.path());
 
-    if(dir!=NULL){
-        for(dirent *entry=readdir(dir);entry!=NULL;entry=readdir(dir))
-            if(entry->d_type == DT_REG)
-                result.push_back(entry->d_name);
-        closedir(dir);
+        return result;
     }
-
-    return result;
-}
 
 }
 

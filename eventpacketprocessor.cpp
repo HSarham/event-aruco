@@ -1155,7 +1155,7 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
             candidates[i].code_im.copyTo(code_image);
 
             cv::resize(code_image*255,code_image,MarkerCandidate::marker_size,0,0,cv::INTER_NEAREST);
-            cv::cvtColor(code_image,code_image,CV_GRAY2BGR);
+            cv::cvtColor(code_image,code_image,cv::COLOR_GRAY2BGR);
             cv::warpPerspective(code_image,image,candidates[i].transform,cv::Size(128,128),cv::INTER_NEAREST,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
             cv::resize(code_image,code_image,cv::Size(640,640),0,0,cv::INTER_NEAREST);
             if(display){
