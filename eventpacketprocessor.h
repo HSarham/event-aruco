@@ -102,6 +102,8 @@ private:
     float kernel_sigma=0.3*((kernel_size-1)*0.5-1)+0.8;
     cv::Size kernel_2D_size=cv::Size(kernel_size,kernel_size);
     std::vector<std::vector<std::vector<float>>> off_cell_events,on_cell_events;
+    
+    bool display;
 
     void preprocess(EventFrame &io);
     void maskBlur(EventFrame &input);
@@ -128,7 +130,7 @@ private:
 public:
     const double deg_in_rad=std::acos(-1)/180.0;
     static void linear_regression(const std::vector<double> &alphas, const std::vector<double> &betas, double &c, double &d);//beta_i=c*alpha_i+d
-    EventPacketProcessor(cv::Size is=cv::Size(128,128));
+    EventPacketProcessor(cv::Size is=cv::Size(128,128), bool in_display=false);
     void update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index);
 };
 

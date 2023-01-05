@@ -32,7 +32,7 @@ void print_usage(){
 int main(int argc, char* argv[]){
 
 
-    if(argc<1){
+    if(argc<2){
         print_usage();
         return -1;
     }

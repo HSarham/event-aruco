@@ -208,8 +208,9 @@ void EventPacketProcessor::preprocess(EventFrame &io){
     io=output;
 }
 
-EventPacketProcessor::EventPacketProcessor(cv::Size is)
+EventPacketProcessor::EventPacketProcessor(cv::Size is, bool in_display)
 {
+    display = in_display;
     im_size=is;
     display_size=im_size*display_scale;
 
@@ -976,8 +977,6 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
 //    else{
         fill_in_frames(pep);
 //    }
-
-    bool display = false;
 
     cv::Mat on_one_min_8uc, off_one_min_8uc;
 

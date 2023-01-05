@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
         return -1;
     }
 
-    int start_index=-1,end_index=-1;
+    int start_index=0,end_index=-1;
     if(argc==4){
         start_index=stoi(argv[2]);
         end_index=stoi(argv[3]);
@@ -58,8 +58,8 @@ int main(int argc, char* argv[]){
 //    return 0;
 
     //--------debug
-
-    EventPacketProcessor epp(cv::Size(128,128));
+    bool display_processing = false;
+    EventPacketProcessor epp(cv::Size(128,128),display_processing);
 //    EventCam ec(NULL,0);
 //    cout<<"Loading packets.."<<endl;
 //    ec.loadPacketsFile(dataset_folder+"/packets.bin");
@@ -76,11 +76,13 @@ int main(int argc, char* argv[]){
 
     vector<double> durations;
     vector<double> packets_per_seconds;
+    
+    bool calc_durations = true;
 
     while(ies.getNextFrame(packet,rgb,&curr_index)){
         if(curr_index<start_index)
             continue;
-        if(curr_index>end_index)
+        if(curr_index>end_index && end_index != -1)
             break;
         if(curr_index==start_index)
             epp.update(packet,curr_index);
@@ -90,19 +92,18 @@ int main(int argc, char* argv[]){
         std::chrono::high_resolution_clock::time_point before=std::chrono::high_resolution_clock::now(),now;
         epp.update(packet,curr_index);
         now=std::chrono::high_resolution_clock::now();
-        double duration=std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count();
-//        if(curr_index>=start_index){
-//            packets_per_seconds.push_back(1/duration);
-//            durations.push_back(duration);
-//        }
-//        before=now;
+        if (calc_durations){
+            double duration=std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count();
+        
+            if(curr_index>=start_index){
+                packets_per_seconds.push_back(1/duration);
+                durations.push_back(duration);
+            }
+            before=now;
+        }
 //        cv::waitKey();
     }
 
-//    cout<<endl;
-//    for(double d:durations){
-//        cout<<d<<endl;
-//    }
 
     std::sort(durations.begin(),durations.end());
     std::sort(packets_per_seconds.begin(),packets_per_seconds.end());

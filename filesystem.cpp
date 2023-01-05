@@ -12,7 +12,7 @@ namespace filesystem_extra {
 
         for(auto const& entry : std::filesystem::directory_iterator(path))
             if(entry.is_directory())
-                result.push_back(entry.path());
+                result.push_back(entry.path().filename());
 
 
         return result;
@@ -25,7 +25,7 @@ namespace filesystem_extra {
 
         for(auto const& entry : std::filesystem::directory_iterator(path))
             if(entry.is_regular_file())
-                result.push_back(entry.path());
+                result.push_back(entry.path().filename());
 
         return result;
     }

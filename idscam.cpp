@@ -8,10 +8,59 @@
 
 using namespace std;
 
+#ifdef WITH_UEYE
 void check_ret_val(INT ret_val,string message){
     if(ret_val != IS_SUCCESS){
         throw runtime_error(message + " successfully.");
     }
+}
+
+void IDSCam::openCam(){
+    INT num_cams;
+    check_ret_val(is_GetNumberOfCameras(&num_cams),"Could not get number of the cameras");
+    if(num_cams<1){
+        throw runtime_error("No cameras are connected.");
+    }
+
+    vector<BYTE> cam_list_vec(sizeof(DWORD)+num_cams*sizeof(UEYE_CAMERA_INFO));
+
+    UEYE_CAMERA_LIST* cam_list=(UEYE_CAMERA_LIST*)cam_list_vec.data();
+    cam_list->dwCount=num_cams;
+
+    check_ret_val(is_GetCameraList(cam_list),"Could not get the camera list");
+    cout<<"camera ids: ";
+    for(int i=0;i<cam_list->dwCount;i++){
+        cout<<cam_list->uci[i].dwCameraID<<" ";
+    }
+    cout<<endl;
+
+    //Open the camera
+    cam_handle = 0;
+    check_ret_val(is_InitCamera(&cam_handle,NULL),"Could not open camera with the given id");
+
+    //get the width and height
+    SENSORINFO sensor_info;
+    check_ret_val(is_GetSensorInfo(cam_handle,&sensor_info),"Could not get sensor info");
+    INT height=sensor_info.nMaxHeight, width=sensor_info.nMaxWidth;
+
+    //enable 60 fps
+    UINT clock_fq=28;
+    is_PixelClock(cam_handle,IS_PIXELCLOCK_CMD_SET,(void*)&clock_fq,sizeof(clock_fq));
+    double frame_rate;
+    is_SetFrameRate(cam_handle,60,&frame_rate);
+    cout<<"frame rate set to: "<<frame_rate<<endl;
+
+    //create the memories and add them to the sequence
+    for(int i=0;i<num_frames;i++){
+        frames[i].create(height,width,CV_8UC3);
+        is_SetAllocatedImageMem(cam_handle,width,height,24,(char*)frames[i].data,&mem_ids[i]);
+        is_AddToSequence(cam_handle,(char*)frames[i].data,mem_ids[i]);
+    }
+
+    //enable the desired events
+    is_EnableEvent(cam_handle,IS_SET_EVENT_FIRST_PACKET_RECEIVED);
+//    is_EnableEvent(cam_handle,IS_SET_EVENT_FRAME_RECEIVED);
+
 }
 
 void IDSCam::grabber(vector<cv::Mat>* frames_p, atomic_bool *live_view, atomic_bool *recording, vector<long long int> *t_sts, HIDS *cam_handle, LiveView *lw){
@@ -57,23 +106,27 @@ void IDSCam::start(){
     liveView_t=thread(&IDSCam::grabber,&frames,&live_view,&recording,&time_stamps,&cam_handle,liveWindow);
 }
 
+void IDSCam::record(){
+    recording=true;
+    cout<<"Started recording the timestamps."<<endl;
+}
+
+#endif
+
 void IDSCam::stop(){
+#ifdef WITH_UEYE
     recording=false;
     if(stamper_t.joinable())
         stamper_t.join();
-
+#endif
     buffer_index=0;
 
     live_view=false;
     if(liveView_t.joinable())
     liveView_t.join();
-
+#ifdef WITH_UEYE
     is_StopLiveVideo(cam_handle,IS_DONT_WAIT);
-}
-
-void IDSCam::record(){
-    recording=true;
-    cout<<"Started recording the timestamps."<<endl;
+#endif
 }
 
 void IDSCam::player(atomic_bool *playing, LiveView* window, string folder_path, vector<long long int> *time_stamps_p, vector<cv::Mat> *frames_p, long long int s){
@@ -144,6 +197,7 @@ void IDSCam::play(long long int s){
 }
 
 void IDSCam::loadFrames(string folder_path){
+
     stop();
 
     frames.clear();
@@ -184,56 +238,12 @@ IDSCam::~IDSCam(){
         liveView_t.join();
     if(liveWindow!=NULL)
         liveWindow->close();
+#ifdef WITH_UEYE
     check_ret_val(is_ExitCamera(cam_handle),"Could not exit camera with the given id");
+#endif
 }
 
-void IDSCam::openCam(){
-    INT num_cams;
-    check_ret_val(is_GetNumberOfCameras(&num_cams),"Could not get number of the cameras");
-    if(num_cams<1){
-        throw runtime_error("No cameras are connected.");
-    }
 
-    vector<BYTE> cam_list_vec(sizeof(DWORD)+num_cams*sizeof(UEYE_CAMERA_INFO));
-
-    UEYE_CAMERA_LIST* cam_list=(UEYE_CAMERA_LIST*)cam_list_vec.data();
-    cam_list->dwCount=num_cams;
-
-    check_ret_val(is_GetCameraList(cam_list),"Could not get the camera list");
-    cout<<"camera ids: ";
-    for(int i=0;i<cam_list->dwCount;i++){
-        cout<<cam_list->uci[i].dwCameraID<<" ";
-    }
-    cout<<endl;
-
-    //Open the camera
-    cam_handle = 0;
-    check_ret_val(is_InitCamera(&cam_handle,NULL),"Could not open camera with the given id");
-
-    //get the width and height
-    SENSORINFO sensor_info;
-    check_ret_val(is_GetSensorInfo(cam_handle,&sensor_info),"Could not get sensor info");
-    INT height=sensor_info.nMaxHeight, width=sensor_info.nMaxWidth;
-
-    //enable 60 fps
-    UINT clock_fq=28;
-    is_PixelClock(cam_handle,IS_PIXELCLOCK_CMD_SET,(void*)&clock_fq,sizeof(clock_fq));
-    double frame_rate;
-    is_SetFrameRate(cam_handle,60,&frame_rate);
-    cout<<"frame rate set to: "<<frame_rate<<endl;
-
-    //create the memories and add them to the sequence
-    for(int i=0;i<num_frames;i++){
-        frames[i].create(height,width,CV_8UC3);
-        is_SetAllocatedImageMem(cam_handle,width,height,24,(char*)frames[i].data,&mem_ids[i]);
-        is_AddToSequence(cam_handle,(char*)frames[i].data,mem_ids[i]);
-    }
-
-    //enable the desired events
-    is_EnableEvent(cam_handle,IS_SET_EVENT_FIRST_PACKET_RECEIVED);
-//    is_EnableEvent(cam_handle,IS_SET_EVENT_FRAME_RECEIVED);
-
-}
 
 IDSCam::IDSCam(LiveView *lw, int nf)
 {
@@ -245,7 +255,9 @@ IDSCam::IDSCam(LiveView *lw, int nf)
 
     //resize the arrays
     frames.resize(num_frames);
+#ifdef WITH_UEYE
     mem_ids.resize(num_frames);
+#endif
     mem_indices.resize(num_frames);
     time_stamps.resize(num_frames,-1);
 
