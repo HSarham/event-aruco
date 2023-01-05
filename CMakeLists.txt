@@ -10,11 +10,6 @@ find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
-if (libcaer_FOUND)
-    add_compile_options(-DWITH_LIBCAER)
-endif()
-
-
 include_directories(${libcaer_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} 3rdparty ${Qt5Widgets_INCLUDE_DIRS})
 add_subdirectory(3rdparty)
 
