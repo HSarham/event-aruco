@@ -13,7 +13,9 @@ H. Sarmadi, R. Muñoz-Salinas, M. A. Olivares-Mendez and R. Medina-Carnicer, "De
 
 ## Compilation
 Similar to normal CMake projects, for example in the code directory:
+
 `cmake .`
+
 `make `
 
 ## Dataset and Usage
