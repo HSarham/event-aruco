@@ -131,7 +131,7 @@ public:
     const double deg_in_rad=std::acos(-1)/180.0;
     static void linear_regression(const std::vector<double> &alphas, const std::vector<double> &betas, double &c, double &d);//beta_i=c*alpha_i+d
     EventPacketProcessor(cv::Size is=cv::Size(128,128), bool in_display=false);
-    void update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index);
+    void update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index, std::ofstream *output_file=NULL);
 };
 
 #endif // EVENTPACKETPROCESSOR_H

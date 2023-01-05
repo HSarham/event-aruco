@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "eventpacketprocessor.h"
 #include "eventcam.h"
 #include "imageeventsynchronizer.h"
@@ -78,8 +79,11 @@ int main(int argc, char* argv[]){
     vector<double> packets_per_seconds;
     
     bool calc_durations = true;
+    
+    std::ofstream output_file(dataset_folder+"/detected_markers.txt");
 
     while(ies.getNextFrame(packet,rgb,&curr_index)){
+        output_file<<"packet_index: "<<curr_index<<std::endl;
         if(curr_index<start_index)
             continue;
         if(curr_index>end_index && end_index != -1)
@@ -90,7 +94,7 @@ int main(int argc, char* argv[]){
 //        sprintf(index_str,"%04d",curr_index);
 //        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_rgb.png",rgb);
         std::chrono::high_resolution_clock::time_point before=std::chrono::high_resolution_clock::now(),now;
-        epp.update(packet,curr_index);
+        epp.update(packet,curr_index,&output_file);
         now=std::chrono::high_resolution_clock::now();
         if (calc_durations){
             double duration=std::chrono::duration_cast<std::chrono::milliseconds>(now-before).count();
@@ -104,6 +108,7 @@ int main(int argc, char* argv[]){
 //        cv::waitKey();
     }
 
+    output_file.close();
 
     std::sort(durations.begin(),durations.end());
     std::sort(packets_per_seconds.begin(),packets_per_seconds.end());

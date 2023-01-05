@@ -4,6 +4,7 @@
 #include <opencv2/ximgproc.hpp>
 #include <algorithm>
 #include <typeinfo>
+#include <fstream>
 extern "C"{
 #include "LSD/lsd.h"
 }
@@ -951,7 +952,7 @@ void EventPacketProcessor::trim_segment(const EventFrame &age_frame, LineSegment
 
 }
 
-void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index){
+void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::PolarityEventPacket> pep, size_t curr_index, std::ofstream* output_file){
 
     char index_str[100];
     sprintf(index_str,"%04d",curr_index);
@@ -1145,12 +1146,20 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
                 candidates[i].marker_index=dictionary[curr_code];
             }
         }
+        
+        if(output_file != NULL && candidates[i].marker_index!=-1){
+            (*output_file)<<"id: "<<candidates[i].marker_index<<std::endl;
+            (*output_file)<<"corner coordinates: "<<std::endl;
+            for(auto &p : candidates[i].p){
+               (*output_file)<<p<<std::endl; 
+            }
+        }
 
         if(display && candidates[i].marker_index!=-1){
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_on.png", im_show_on);
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_off.png", im_show_off);
-            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidate_image.png",candidate_images[i]);
-
+//            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_on.png", im_show_on);
+//            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_decoding_off.png", im_show_off);
+//            cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidate_image.png",candidate_images[i]);
+            
             candidates[i].code_im.copyTo(code_image);
 
             cv::resize(code_image*255,code_image,MarkerCandidate::marker_size,0,0,cv::INTER_NEAREST);
@@ -1173,13 +1182,13 @@ void EventPacketProcessor::update(std::shared_ptr<const libcaer::events::Polarit
     before=now;
 
     if(display && candidates_im.rows>0){
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidates_im.png",candidates_im);
+//        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_candidates_im.png",candidates_im);
         cv::imshow("candidates_im",candidates_im);
     }
 
     if(display){
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_display_frame.png",display_frame);
-        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_image.png",image);
+//        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_display_frame.png",display_frame);
+//        cv::imwrite("/home/hamid/event_aruco/"+string(index_str)+"_image.png",image);
         cv::imshow("image",image);
     }
 
