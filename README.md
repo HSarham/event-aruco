@@ -1,12 +1,16 @@
-### Reference implementation of the following paper:
-### H. Sarmadi, R. Muñoz-Salinas, M. A. Olivares-Mendez and R. Medina-Carnicer, "Detection of Binary Square Fiducial Markers Using an Event Camera," in IEEE Access, vol. 9, pp. 27813-27826, 2021, doi: 10.1109/ACCESS.2021.3058423.
+# Event-ArUco
 
-### Tested Requirements
--OpenCV 4.6
--[libcaer 3.3.14](https://gitlab.com/inivation/dv/libcaer/-/tree/3.3.14)
--Qt5 (Widgets component)
+A library to detect ArUco markers using event cameras
 
-### Dataset and Usage
+## Reference implementation of the following paper:
+H. Sarmadi, R. Muñoz-Salinas, M. A. Olivares-Mendez and R. Medina-Carnicer, "Detection of Binary Square Fiducial Markers Using an Event Camera," in IEEE Access, vol. 9, pp. 27813-27826, 2021, doi: 10.1109/ACCESS.2021.3058423.
+
+## Tested Requirements
+- OpenCV 4.6
+- [libcaer 3.3.14](https://gitlab.com/inivation/dv/libcaer/-/tree/3.3.14)
+- Qt5 (Widgets component)
+
+## Dataset and Usage
 You can download testing data from [here](http://sarmadi.me/public_files/event-aruco/)
 
 Download any of the zip files (for example side2side.zip) and extract it in the same folder as the executable.
