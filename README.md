@@ -19,7 +19,7 @@ Similar to normal CMake projects, for example in the code directory:
 `make `
 
 ## Dataset and Usage
-You can download testing data from [here](http://sarmadi.me/public_files/event-aruco/)
+You can download testing data from [here](http://sarmadi.me/public_files/event-aruco/).
 
 Download any of the zip files (for example side2side.zip) and extract it in the same folder as the executable.
 
