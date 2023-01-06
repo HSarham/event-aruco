@@ -14,9 +14,8 @@ H. Sarmadi, R. Muñoz-Salinas, M. A. Olivares-Mendez and R. Medina-Carnicer, "De
 ## Compilation
 Similar to normal CMake projects, for example in the code directory:
 
-`cmake .`
-
-`make `
+    cmake .
+    make 
 
 ## Dataset and Usage
 You can download testing data from [here](http://sarmadi.me/public_files/event-aruco/).
