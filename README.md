@@ -23,7 +23,9 @@ You can download testing data from [here](http://sarmadi.me/public_files/event-a
 
 Download any of the zip files (for example side2side.zip) and extract it in the same folder as the executable.
 
-Then you can run the detection algorithm after compiling the project for example by:
+Please not that in our paper we only used the modded_default_params/side2side.zip and modded_slow_params/side2side.zip sequences for the quantitative results.
+
+After extracting a sequence you can run the detection algorithm by giving the sequence folder path as input argument. For example:
 
 `./process_events side2side`
 
