@@ -35,3 +35,18 @@ If you want to only watch the dataset's sequence you can use the dataset_player 
 
 `./dataset_player side2side`
 
+## Citation
+Please cite our paper if you use our code or dataset:
+
+    @article{Sarmadi_2021,
+      doi = {10.1109/access.2021.3058423},
+      url = {https://doi.org/10.1109%2Faccess.2021.3058423},
+      year = 2021,
+      publisher = {Institute of Electrical and Electronics Engineers ({IEEE})},
+      volume = {9},
+      pages = {27813--27826},
+      author = {Hamid Sarmadi and Rafael Munoz-Salinas and Miguel A. Olivares-Mendez and Rafael Medina-Carnicer},
+      title = {Detection of Binary Square Fiducial Markers Using an Event Camera},
+      journal = {{IEEE} Access}
+    }
+
