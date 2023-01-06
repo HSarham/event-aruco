@@ -16,7 +16,6 @@ Similar to normal CMake projects, for example in the code directory:
 
     cmake .
     make
-
 ## Dataset and Usage
 You can download testing data from [here](http://sarmadi.me/public_files/event-aruco/).
 
