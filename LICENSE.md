@@ -2,7 +2,7 @@ Unless otherwise specified all files of are copyrighted under the following lice
 
 BSD 2-Clause License
 
-Copyright (c) 2020, Hamid Sarmadi
+Copyright (c) 2020-2023, Hamid Sarmadi
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
